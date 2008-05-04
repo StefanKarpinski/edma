@@ -1,0 +1,89 @@
+\documentclass{article}
+
+\usepackage[pdftex]{graphicx}
+\usepackage[labelfont=bf,small]{caption}
+\usepackage[font=small,labelfont=bf,position=top,nearskip=0em]{subfig}
+%\usepackage[left=0.8in,top=0.9in,right=0.8in,bottom=1in,nohead]{geometry}
+\usepackage{cite,amsmath,amssymb,rotating,multirow,bigstrut,url,wrapfig}
+\usepackage[hyperfigures,bookmarks,bookmarksopen,bookmarksnumbered,colorlinks,linkcolor=black,citecolor=black,filecolor=blue,menucolor=black,pagecolor=blue,frenchlinks=true,pdftitle={NPSv2: Technical Overview}]{hyperref}
+
+\title{Exponentially Decaying Moving Averages}
+\author{Stefan Karpinski}
+
+\DeclareMathOperator{\cnt}{count}
+\DeclareMathOperator{\mean}{mean}
+\DeclareMathOperator{\var}{var}
+
+\newcommand{\tmax}{{t_\text{max}}}
+
+\begin{document}
+
+\maketitle
+
+The following describes an efficient technique for calculating exponentially decaying, moving averages (EDMAs) for a time-series of metric values. Essentially, this allows us to store only four floating point values, and derive from these values, the number of data points collected, their average value, and their variance (the square of the standard deviation), with all data points weighted according to how old they are.
+
+\section{Summarizing Unweighted Values}
+
+We begin by presenting the summarization technique for unweighted values, and will then generalize this to weighted values. Let $X=\left\{x_1,x_2,\dots\right\}$ be a series of values we wish to summarize, and let $X_n=\{x_1,\dots,x_n\}$ be the first $n$ values in this series. The goal is to maintain a small set of values, that can be simply updated when the next $x_i$ value arrives, such that these values allow us to easily compute the count, mean and variance of the observed $x_i$. Tracking the first three raw moments of the $x_i$ allows us to do precisely this:
+\begin{align}
+\left\{s_0, s_1, s_2\right\} \text{ where } s_k = \sum_{i=1}^{n}{x_i^k}.
+\end{align}
+Note that $s_0$ is simply the count of the number of seen values:
+\begin{align}
+s_0 = \sum_{i=1}^{n}{x_i^0} = n.
+\end{align}
+Similarly, $s_1$ is the sum of their values, while $s_2$ is the sum of their squares. Thus, the count of values is $s_0$, while the mean of these values is $s_1/s_0$. Calculating the variance is somewhat more complicated. If we write $\bar{x}$ for the mean, then the sample variance is
+\begin{align}
+\var(X_n) &= \frac{1}{n-1} \sum_{i=1}^{n}(x_i-\bar{x})^2.
+\end{align}
+With some algebra, this can be expressed as
+\begin{align}
+\var(X_n) &= \frac{s_2 - s_1^2/s_0}{s_0-1}.
+\end{align}
+
+\section{Summarizing EDMA Values}\label{sec:summarization-edma}
+
+We generalize the previous notion of a series of values, by assigning to each $x_i$, a timestamp, $t_i$, representing the time at which the value was collected. Now we wish to dynamically weight each data point to produce an exponentially decaying, moving average with respect to the current time, $t$:
+\begin{align}
+w_i(t)=\rho^{t-t_i}.
+\end{align}
+Here $\rho$ is some constant decay factor between 0 and 1. The unweighted case can be viewed as the degenerate form where $\rho=1$. Similarly, tracking only the last data value can be viewed as the degenerate case where $\rho=0$. We generalize the raw moment values to incorporate the exponentially decaying weights:
+\begin{align}
+s_k(t) = \sum_{i=1}^{n}{w_i(t)x_i^k} = \sum_{i=1}^{n}{\rho^{t-t_i} x_i^k}.
+\end{align}
+We use these time-parameterized, weighted moments to compute the EDMA versions of the series count, mean, and variance, exactly as before. You'll note that the count of data points will no longer be a natural number.
+
+To simplify the calculation of $s_k(t)$, we observe that for any time, $t_0$, the following identity holds:
+\begin{align}
+s_k(t)
+= \sum_{i=1}^{n}{\rho^{t-t_i} x_i^k}
+= \rho^{t-t_0} \sum_{i=1}^{n}{\rho^{t_0-t_i} x_i^k} 
+= \rho^{t-t_0} s_k(t_0).
+\end{align}
+In particular, if we let $\tmax=\max\left\{t_i\right\}$ and write $s_k=s_k(\tmax)$, then we can compute $s_k(t)$ for any time $t$ knowing only the fixed values, $\tmax$ and $s_k$:
+\begin{align}
+\label{eqn:sk-tmax}
+s_k(t) = \rho^{t-\tmax} s_k.
+\end{align}
+Moreover, the weighted raw moment values can be easily updated for a new value, $x$, arriving at time $t$, using the following formulas:
+\begin{align}
+s_k &\leftarrow \rho^{t-\tmax} s_k + x^k \\
+\tmax &\leftarrow \max\left\{t,\tmax\right\}.
+\end{align}
+The EDMA count, mean, and variance can be computed using the four easily maintained values $\left\{\tmax,s_0,s_1,s_2\right\}$. The calculation of the mean and variance can be optimized by applying Equation~\ref{eqn:sk-tmax} and canceling common factors. The following equations give the fully simplified expressions:
+\begin{align}
+\cnt(X_n,t) &= \rho^{t-\tmax} s_0 \\
+\mean(X_n,t) &= s_1/s_0 \\
+\var(X_n,t) &= \frac{s_2 - s_1^2/s_0}{s_0-1/\rho^{t-\tmax}}.
+\end{align}
+From these expressions, we can see that in the absence of new data points, as time passes the count decreases exponentially (as expected), while the mean remains constant, and the variance grows.\footnote{Intuitively, this can be seen fairly easily. More rigorously, consider the derivative:
+\begin{align}
+\frac{d \var(X_n,t)}{d t} =
+	\log(\rho)
+	\left[ \frac{s_1^2 - s_0 s_2}{s_0} \right]
+	\left[ \frac{\rho^{t-\tmax}}{(\rho^{t-\tmax} s_0 - 1)^2} \right].
+\end{align}
+The first term is always negative, and the last term is always positive. The middle term can be shown to be negative, so long as the weights, $w_i(t)$, are all positive, which they are.
+}
+
+\end{document}
