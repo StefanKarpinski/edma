@@ -67,7 +67,7 @@ s_k(t) = \rho^{t-\tmax} s_k.
 \end{align}
 Moreover, the weighted raw moment values can be easily updated for a new value, $x$, arriving at time $t$, using the following formulas:
 \begin{align}
-s_k &\leftarrow \rho^{t-\tmax} s_k + x^k \\
+s_k &\leftarrow \rho^{\max\{0,t-\tmax\}} s_k + x^k \\
 \tmax &\leftarrow \max\left\{t,\tmax\right\}.
 \end{align}
 The EDMA count, mean, and variance can be computed using the four easily maintained values $\left\{\tmax,s_0,s_1,s_2\right\}$. The calculation of the mean and variance can be optimized by applying Equation~\ref{eqn:sk-tmax} and canceling common factors. The following equations give the fully simplified expressions:
@@ -81,9 +81,28 @@ From these expressions, we can see that in the absence of new data points, as ti
 \frac{d \var(X_n,t)}{d t} =
 	\log(\rho)
 	\left[ \frac{s_1^2 - s_0 s_2}{s_0} \right]
-	\left[ \frac{\rho^{t-\tmax}}{(\rho^{t-\tmax} s_0 - 1)^2} \right].
+	\left[ \frac{\rho^{\max\{0,t-\tmax\}}}{(\rho^{t-\tmax} s_0 - 1)^2} \right].
 \end{align}
 The first term is always negative, and the last term is always positive. The middle term can be shown to be negative, so long as the weights, $w_i(t)$, are all positive, which they are.
 }
+
+In the case where data points occur at constant intervals, assumed without loss of generality to be 1, these update formulas can be simplified further.
+In this case, we may take $t_i = i$, and $\tmax = n$ at every point in time.
+Thus we may count $n$ instead of updating $\tmax$ and the following update formula pertains:
+\begin{align}
+s_k &\leftarrow \rho s_k + x^k
+\end{align}
+The simplified formulas for count, mean and variance become:
+\begin{align}
+\cnt(X_n,t) &= \rho^{t-n} s_0 \\
+\mean(X_n,t) &= s_1/s_0 \\
+\var(X_n,t) &= \frac{s_2 - s_1^2/s_0}{s_0-1/\rho^{t-n}}.
+\end{align}
+If we are only interested in the values at the time of the last data collection, we have $t = n$, which simplifies these formulas even further:
+\begin{align}
+\cnt(X_n) &= s_0 \\
+\mean(X_n) &= s_1/s_0 \\
+\var(X_n) &= \frac{s_2 - s_1^2/s_0}{s_0-1}.
+\end{align}
 
 \end{document}
