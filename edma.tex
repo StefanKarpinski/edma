@@ -34,11 +34,11 @@ s_0 = \sum_{i=1}^{n}{x_i^0} = n.
 \end{align}
 Similarly, $s_1$ is the sum of their values, while $s_2$ is the sum of their squares. Thus, the count of values is $s_0$, while the mean of these values is $s_1/s_0$. Calculating the variance is somewhat more complicated. If we write $\bar{x}$ for the mean, then the sample variance is
 \begin{align}
-\var(X_n) &= \frac{1}{n-1} \sum_{i=1}^{n}(x_i-\bar{x})^2.
+\var &= \frac{1}{n-1} \sum_{i=1}^{n}(x_i-\bar{x})^2.
 \end{align}
 With some algebra, this can be expressed as
 \begin{align}
-\var(X_n) &= \frac{s_2 - s_1^2/s_0}{s_0-1}.
+\var &= \frac{s_2 - s_1^2/s_0}{s_0-1}.
 \end{align}
 
 \section{Summarizing EDMA Values}\label{sec:summarization-edma}
@@ -67,42 +67,69 @@ s_k(t) = \rho^{t-\tmax} s_k.
 \end{align}
 Moreover, the weighted raw moment values can be easily updated for a new value, $x$, arriving at time $t$, using the following formulas:
 \begin{align}
-s_k &\leftarrow \rho^{\max\{0,t-\tmax\}} s_k + x^k \\
-\tmax &\leftarrow \max\left\{t,\tmax\right\}.
+s_k &\leftarrow \rho^{\max\{0,t-\tmax\}} s_k + x^k \label{eqn:sk-update} \\
+\tmax &\leftarrow \max\left\{t,\tmax\right\}. \label{eqn:tmax-update}
 \end{align}
 The EDMA count, mean, and variance can be computed using the four easily maintained values $\left\{\tmax,s_0,s_1,s_2\right\}$. The calculation of the mean and variance can be optimized by applying Equation~\ref{eqn:sk-tmax} and canceling common factors. The following equations give the fully simplified expressions:
 \begin{align}
-\cnt(X_n,t) &= \rho^{t-\tmax} s_0 \\
-\mean(X_n,t) &= s_1/s_0 \\
-\var(X_n,t) &= \frac{s_2 - s_1^2/s_0}{s_0-1/\rho^{t-\tmax}}.
+\cnt(t) &= \rho^{t-\tmax} s_0 \\
+\mean(t) &= s_1/s_0 \\
+\var(t) &= \frac{s_2 - s_1^2/s_0}{s_0-1/\rho^{t-\tmax}}.
 \end{align}
 From these expressions, we can see that in the absence of new data points, as time passes the count decreases exponentially (as expected), while the mean remains constant, and the variance grows.\footnote{Intuitively, this can be seen fairly easily. More rigorously, consider the derivative:
 \begin{align}
-\frac{d \var(X_n,t)}{d t} =
-	\log(\rho)
-	\left[ \frac{s_1^2 - s_0 s_2}{s_0} \right]
-	\left[ \frac{\rho^{t-\tmax}}{(\rho^{t-\tmax} s_0 - 1)^2} \right].
+\frac{d \var(t)}{d t} =
+\log(\rho)
+\left[ \frac{s_1^2 - s_0 s_2}{s_0} \right]
+\left[ \frac{\rho^{t-\tmax}}{(\rho^{t-\tmax} s_0 - 1)^2} \right].
 \end{align}
-The first term is always negative, and the last term is always positive. The middle term can be shown to be negative, so long as the weights, $w_i(t)$, are all positive, which they are.
+The first term is negative (or zero if $\rho=1$), while the last term is positive. The middle term can be shown to be positive so long as the weights, $w_i(t)$, are positive, which they are. Thus, the derivative must be strictly positive unless $\rho=1$, in which case it is zero.
 }
+
+\subsection{Constant Intervals}
 
 In the case where data points occur at constant intervals, assumed without loss of generality to be 1, these update formulas can be simplified further.
 In this case, we may take $t_i = i$, and $\tmax = n$ at every point in time.
 Thus we may count $n$ instead of updating $\tmax$ and the following update formula pertains:
 \begin{align}
-s_k &\leftarrow \rho s_k + x^k
+s_k &\leftarrow \rho s_k + x^k.
 \end{align}
 The simplified formulas for count, mean and variance become:
 \begin{align}
-\cnt(X_n,t) &= \rho^{t-n} s_0 \\
-\mean(X_n,t) &= s_1/s_0 \\
-\var(X_n,t) &= \frac{s_2 - s_1^2/s_0}{s_0-1/\rho^{t-n}}.
+\cnt(t) &= \rho^{t-n} s_0 \\
+\mean(t) &= s_1/s_0 \\
+\var(t) &= \frac{s_2 - s_1^2/s_0}{s_0-1/\rho^{t-n}}.
 \end{align}
 If we are only interested in the values at the time of the last data collection, we have $t = n$, which simplifies these formulas even further:
 \begin{align}
-\cnt(X_n) &= s_0 \\
-\mean(X_n) &= s_1/s_0 \\
-\var(X_n) &= \frac{s_2 - s_1^2/s_0}{s_0-1}.
+\cnt &= s_0 \\
+\mean &= s_1/s_0 \\
+\var &= \frac{s_2 - s_1^2/s_0}{s_0-1}.
 \end{align}
+
+\subsection{Constant Values}
+
+In the case where all have the same value, assumed without loss of generality to be 1, these update formulas can be simplified even more than in the constant interval case.
+In this case, the mean value is 0 before the first measurement and 1 after it, while the variance is undefined before the second measurement and 0 after it.
+Therefore, the only meaningful statistic is the time-decay-weighted count, so we only need to track $s_0$ and $\tmax$.
+The update and current time equations in this case are identical to Equations~\ref{eqn:sk-tmax},~\ref{eqn:sk-update}~and~\ref{eqn:tmax-update} for $k=0$:
+\begin{align}
+\label{eqn:sk-tmax}
+s_0(t) &= \rho^{t-\tmax} s_0 \\
+s_0 &\leftarrow \rho^{\max\{0,t-\tmax\}} s_0 + 1 \\
+\tmax &\leftarrow \max\left\{t,\tmax\right\}.
+\end{align}
+
+\subsection{Choosing $\rho$}
+
+The decay factor is explicitly given as a real value on $[0,1]$.
+However, that is highly provides no sense of what value to choose.
+The most intuitive way to think about the decay factor is in terms of half-lives:
+How long before a value loses half of its weight?
+In equations, given a half-life, $\tau$, we want $\rho$ such that
+\begin{align}
+\rho^\tau = \frac{1}{2} ~~~ \iff ~~~ \rho = 2^{-1/\tau}.
+\end{align}
+This equation determines the appropriate decay factor for any desired half-life.
 
 \end{document}
