@@ -1,0 +1,6 @@
+#!/bin/sh
+local_name=edma
+remote_name=$local_name
+upload_host=${upload_host:-csil}
+perl -i -ple 's/^nan/0.0/' $local_name.pdf
+rsync -vp --chmod u=rw,go=r $local_name.pdf $upload_host:public_html/papers/$public_name.pdf
