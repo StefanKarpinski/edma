@@ -21,7 +21,7 @@ void element_arrives()
 {
   double new_value = 20 + 10.0 * drand48(); //random value between 20 and 30, say instrument price
 
-  double e = fmax(0, t - tmax);
+  #define e fmax(0, t - tmax) //recompute
 
   int i;
   for(i = 0; i < S_SIZE; i++)
